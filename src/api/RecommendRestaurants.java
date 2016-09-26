@@ -41,11 +41,11 @@ public class RecommendRestaurants extends HttpServlet {
 		// response.getWriter().append("Served at:
 		// ").append(request.getContextPath());
 		// allow access only if session exists
-		/*HttpSession session = request.getSession();
+		HttpSession session = request.getSession();
 		if (session.getAttribute("user") == null || !session.getAttribute("user").equals(request.getParameter("user_id"))) {
 			response.setStatus(403);
 			return;
-		}*/
+		}
 		DBConnection connection = new MySQLDBConnection();
 		JSONArray array = new JSONArray();
 		try {
