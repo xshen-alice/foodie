@@ -6,8 +6,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 import org.json.JSONArray;
@@ -98,6 +105,24 @@ public class MySQLDBConnection implements DBConnection {
 		}
 		return visitedRestaurants;
 	}
+	
+	@Override
+	public List<String> getVisitedRestaurantsByVisitedTime(String userId) {
+		List<String> visitedRestaurants = new ArrayList<String>();
+		try {
+			String sql = "SELECT business_id from history WHERE user_id = ? ORDER BY last_visited_time DESC";
+			PreparedStatement statement = conn.prepareStatement(sql);
+			statement.setString(1, userId);
+			ResultSet rs = statement.executeQuery();
+			while (rs.next()) {
+				String visitedRestaurant = rs.getString("business_id");
+				visitedRestaurants.add(visitedRestaurant);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return visitedRestaurants;
+	}
 
 	@Override
 	public JSONObject getRestaurantsById(String businessId, boolean isVisited) {
@@ -134,18 +159,101 @@ public class MySQLDBConnection implements DBConnection {
 			}
 
 			Set<String> visitedRestaurants = getVisitedRestaurants(userId);
-			Set<String> allCategories = new HashSet<>();// why hashSet?
+			Map<String, Integer> allCategories = new HashMap<String, Integer>();// why hashSet?
 			for (String restaurant : visitedRestaurants) {
-				allCategories.addAll(getCategories(restaurant));
+				for (String category: getCategories(restaurant)) {
+					Integer count = allCategories.get(category);
+					if (count == null) {
+						allCategories.put(category, 1);
+					} else {
+						allCategories.put(category,  count + 1);
+					}
+				}
 			}
 			Set<String> allRestaurants = new HashSet<>();
-			for (String category : allCategories) {
-				Set<String> set = getBusinessId(category);
-				allRestaurants.addAll(set);
+			List<String> rs = new ArrayList<>();
+			List<Map.Entry<String, Integer>> entry = new LinkedList<>(allCategories.entrySet());
+			Collections.sort(entry, 
+					new Comparator<Map.Entry<String, Integer>>() {
+						@Override
+						public int compare(Map.Entry<String, Integer> e1, Map.Entry<String, Integer> e2) {
+							return e2.getValue().compareTo(e1.getValue());
+						}
+					});
+			for (Map.Entry<String, Integer> e : entry) {
+				String category = e.getKey();
+				for (String businessId : getBusinessId(category)) {
+					if (allRestaurants.add(businessId)) {
+						rs.add(businessId);
+					}
+				}
 			}
-			Set<JSONObject> diff = new HashSet<>();
+			List<JSONObject> diff = new ArrayList<>();
 			int count = 0;
-			for (String businessId : allRestaurants) {
+			for (String businessId : rs) {
+				// Perform filtering
+				if (!visitedRestaurants.contains(businessId)) {
+					diff.add(getRestaurantsById(businessId, false));
+					count++;
+					if (count >= MAX_RECOMMENDED_RESTAURANTS) {
+						break;
+					}
+				}
+			}
+			return new JSONArray(diff);
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		return null;
+	}
+	
+	@Override
+	public JSONArray recommendRestaurantsByLocation(String userId, double lat, double lon) {
+		// TODO Auto-generated method stub
+		try {
+			if (conn == null) {
+				return null;
+			}
+			JSONArray array = searchRestaurants(userId, lat, lon);
+			Set<String> nearbyRestaurants = new HashSet<>();
+			for (int i = 0; i < array.length(); i++) {
+				JSONObject obj = array.getJSONObject(i);
+				String restaurant = obj.getString("business_id");
+				nearbyRestaurants.add(restaurant);
+			}
+			Set<String> visitedRestaurants = getVisitedRestaurants(userId);
+			Map<String, Integer> allCategories = new HashMap<String, Integer>();// why hashSet?
+			for (String restaurant : visitedRestaurants) {
+				for (String category: getCategories(restaurant)) {
+					Integer count = allCategories.get(category);
+					if (count == null) {
+						allCategories.put(category, 1);
+					} else {
+						allCategories.put(category,  count + 1);
+					}
+				}
+			}
+			Set<String> allRestaurants = new HashSet<>();
+			List<String> rs = new ArrayList<>();
+			List<Map.Entry<String, Integer>> entry = new LinkedList<>(allCategories.entrySet());
+			Collections.sort(entry, 
+					new Comparator<Map.Entry<String, Integer>>() {
+						@Override
+						public int compare(Map.Entry<String, Integer> e1, Map.Entry<String, Integer> e2) {
+							return e2.getValue().compareTo(e1.getValue());
+						}
+					});
+			for (Map.Entry<String, Integer> e : entry) {
+				String category = e.getKey();
+				for (String businessId : getBusinessId(category)) {
+					if (allRestaurants.add(businessId) && nearbyRestaurants.contains(businessId)) {
+						rs.add(businessId);
+					}
+				}
+			}
+			List<JSONObject> diff = new ArrayList<>();
+			int count = 0;
+			for (String businessId : rs) {
 				// Perform filtering
 				if (!visitedRestaurants.contains(businessId)) {
 					diff.add(getRestaurantsById(businessId, false));
@@ -212,7 +320,7 @@ public class MySQLDBConnection implements DBConnection {
 					api.searchForBusinessesByLocation(lat, lon));
 			JSONArray array = (JSONArray) response.get("businesses");
 
-			List<JSONObject> list = new ArrayList<JSONObject>();
+			Map<Double, List<JSONObject>> map = new HashMap<Double, List<JSONObject>>();
 			Set<String> visited = getVisitedRestaurants(userId);
 
 			for (int i = 0; i < array.length(); i++) {
@@ -253,10 +361,31 @@ public class MySQLDBConnection implements DBConnection {
 				statement.setString(10, imageUrl);
 				statement.setString(11, url);
 				statement.execute();
+				List<JSONObject> list = map.get(stars);
+				if (list == null) {
+					list = new ArrayList<JSONObject>();
+					map.put(stars, list);
+				}
 				list.add(outputObject);
 			}
+			List<JSONObject> rs = new ArrayList<JSONObject>();
+			Object[] keySet = map.keySet().toArray();
+			Arrays.sort(keySet, 
+					new Comparator<Object>() {
+						@Override
+						public int compare(Object o1, Object o2) {
+							Double d1 = (Double) o1;
+							Double d2 = (Double) o2;
+							return d2.compareTo(d1);
+						}
+					});
+			for (Object key : keySet) {
+				for (JSONObject obj : map.get((Double) key)) {
+					rs.add(obj);
+				}
+			}
 
-			return new JSONArray(list);
+			return new JSONArray(rs);
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}

@@ -2,6 +2,7 @@ package api;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -58,7 +59,7 @@ public class VisitHistory extends HttpServlet {
 			 */
 			if (request.getParameterMap().containsKey("user_id")) {
 				String userId = request.getParameter("user_id");
-				Set<String> visited_business_id = connection.getVisitedRestaurants(userId);
+				List<String> visited_business_id = connection.getVisitedRestaurantsByVisitedTime(userId);
 				array = new JSONArray();
 				for (String id : visited_business_id) {
 					array.put(connection.getRestaurantsById(id, true));

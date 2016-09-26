@@ -333,14 +333,14 @@ function loadFavoriteRestaurants() {
 /**
  * API #3
  * Load recommended restaurants
- * API end point: [GET] /Dashi/recommendation?user_id=1111
+ * API end point: [GET] /Dashi/recommendation?user_id=1111&lat=37.38&lon=-122.08
  */
 function loadRecommendedRestaurants() {
   activeBtn('recommend-btn');
 
   // The request parameters
   var url = './recommendation';
-  var params = 'user_id=' + user_id;
+  var params = 'user_id=' + user_id + '&lat=' + lat + '&lon=' + lng;
   var req = JSON.stringify({});
   
   // display loading message

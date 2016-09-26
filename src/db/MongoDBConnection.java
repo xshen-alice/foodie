@@ -221,4 +221,16 @@ public class MongoDBConnection implements DBConnection {
 		return firstName + " " + lastName;
 	}
 
+	@Override
+	public List<String> getVisitedRestaurantsByVisitedTime(String userId) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public JSONArray recommendRestaurantsByLocation(String userId, double lat, double lon) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

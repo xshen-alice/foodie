@@ -1,0 +1,2 @@
+Foodie aims to use personalization to improve resturant search and recommendation based on search history and favorite record.
+Second commit: (1) sort nearby restaurants by number of stars, (2) sort favourite restaurants by time added, (3) count the frequency of categories in favourite restaurants and sort recommend restaurnats by the freqency of categories, (4) filter the recommend restaurants so that only the nearby restaurants will be recommended.

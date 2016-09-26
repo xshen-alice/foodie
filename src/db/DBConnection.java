@@ -40,6 +40,13 @@ public interface DBConnection {
      * @return
      */
     public Set<String> getVisitedRestaurants(String userId);
+    
+    /**
+     * Get the visited restaurants for a user with most recent one at the beginning.
+     * @param userId
+     * @return
+     */
+    public List<String> getVisitedRestaurantsByVisitedTime(String userId);
 
     /**
      * Get the restaurant json by id.
@@ -55,6 +62,13 @@ public interface DBConnection {
      * @return
      */
     public JSONArray recommendRestaurants(String userId);
+    
+    /**
+     * Recommend restaurants based on userId and his current location
+     * @param userId
+     * @return
+     */
+    public JSONArray recommendRestaurantsByLocation(String userId, double lat, double lon);
     
     /**
      * Gets categories based on business id
