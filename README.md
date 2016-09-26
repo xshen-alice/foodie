@@ -8,6 +8,7 @@ All APIs are in the src/api directory.
 - LoginServlet: to login
 - LogoutServlet: to logout
 - RpcParser: parser of HTTP request and response
+
 #Hisotry: last updated 26 Sep 2016
 - Sort nearby restaurants by number of stars
 - Sort favourite restaurants by time added
